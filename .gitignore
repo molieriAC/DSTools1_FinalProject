@@ -131,3 +131,4 @@ dmypy.json
 # misc
 /checks
 .vscode
+config.py
