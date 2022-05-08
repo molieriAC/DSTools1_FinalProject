@@ -12,7 +12,9 @@ def web_scrape_api_call(url_to_scrape):
     url = "https://api.webscrapingapi.com/v1"
     params = {
     "api_key":WebScrapingAPIkey,
-    "url":url_to_scrape
+    "url":url_to_scrape,
+    "country":"us",
+    "proxy_type":"datacenter"
     }
     response = requests.request("GET", url, params=params)
     return response
@@ -33,12 +35,19 @@ def pull_company_names(loc):
     cnct.row_factory = lambda cursor, row: row[0]
     cursor = cnct.cursor()
     
-    # create the query, keeping only unique company names
-    cursor.execute('SELECT DISTINCT company_name FROM indeed_jobs')
+    # Get unique company names from the original database
+    cursor.execute('SELECT DISTINCT company_name FROM indeed_jobs;')
     comps = list(cursor.fetchall())
+    
+    # Get company names that we already have ratings for
+    cursor.execute('SELECT DISTINCT companies FROM ratings;')
+    alreadyHave = list(cursor.fetchall())
+
+    # Keep only company names that we don't yet have ratings for
+    toSearch = set(comps) - set(alreadyHave)
 
     # there may be characters that will cause the search to fail fix this by building a dataframe that has the original name and stripped name
-    compsDf = pd.DataFrame(comps, columns = ['companies'])
+    compsDf = pd.DataFrame(toSearch, columns = ['companies'])
     compsDf['nameFix'] = compsDf['companies'].str.replace("[,./\()'\"-]", ' ', regex=True).str.lower()
     
     # # output dataframe to file for review
@@ -61,28 +70,15 @@ def company_URL_search(nameList: pd.DataFrame):
     nameListNew['linkPart'] = ""
     counter = 0
     for name in nameListNew['nameFix'].to_list():
-        counter += 1
+        # Search using glassdoor search
         # html = requests.get(f"https://www.glassdoor.com/Search/results.htm?keyword={name}", headers = {'User-agent': 'Mozilla/5.0'})
-        
-        # # try using webscraping api
-        # # html = web_scrape_api_call(f"https://www.google.com/search?q=glassdoor working at {name}")
-        
-        # nameSoup = BeautifulSoup(html.content, 'html.parser')
-        # # loop through the returned html and save the proper links
-        # for a in nameSoup.find_all('a', href=True):
-        #     if "/Overview/" in a['href']:
-        #         nameListNew.loc[nameListNew['nameFix'] == name, 'linkPart'] = a['href']
-        #         # for now we're only going to take the top result from search
-        # time.sleep(10)
-        
-        # do a google search to compare?:
-        # html2 = requests.get(f"https://www.google.com/search?q=glassdoor working at {name}", headers = {'User-agent': 'Mozilla/5.0'})
-        html2 = web_scrape_api_call(f"https://www.google.com/search?q=glassdoor working at {name}")
-        
-        googSoup = BeautifulSoup(html2.content, 'html.parser')
+        # try using webscraping api
+        html = web_scrape_api_call(f"https://www.google.com/search?q=glassdoor working at {name}")
+        nameSoup = BeautifulSoup(html.content, 'html.parser')
         # loop through the returned html and save the proper links
-        for a in googSoup.find_all('a', href=True):
+        for a in nameSoup.find_all('a', href=True):
             if "/Overview/" in a['href']:
+                counter += 1
                 workAtIndex = a['href'].index('Working-at-')
                 htmIndex = a['href'].index('.htm')
                 trimLink = a['href'][workAtIndex+11:htmIndex+4]
@@ -90,6 +86,25 @@ def company_URL_search(nameList: pd.DataFrame):
                 nameListNew.loc[nameListNew['nameFix'] == name, 'linkPart'] = trimLink
                 # for now we're only going to take the top result from search
                 break
+
+        # Commented code block will run the search through google's search it's more accurate when it works but proxy's get blocked more often.
+        '''# do a google search instead:
+        # html2 = requests.get(f"https://www.google.com/search?q=glassdoor working at {name}", headers = {'User-agent': 'Mozilla/5.0'})
+        html2 = web_scrape_api_call(f"https://www.google.com/search?q=glassdoor working at {name}")
+        
+        googSoup = BeautifulSoup(html2.content, 'html.parser')
+        # loop through the returned html and save the proper links
+        for a in googSoup.find_all('a', href=True):
+            if "/Overview/" in a['href']:
+                print(a['href'])
+                # parse the returned link to get only the portion that we want
+                workAtIndex = a['href'].index('Working-at-')
+                htmIndex = a['href'].index('.htm')
+                trimLink = a['href'][workAtIndex+11:htmIndex+4]
+                print(counter, trimLink)
+                nameListNew.loc[nameListNew['nameFix'] == name, 'linkPart'] = trimLink
+                # for now we're only going to take the top result from search
+                break'''
             
     # save link parts to file for review
     nameListNew.to_csv('checks/scrapeTest.csv')     
@@ -168,7 +183,7 @@ def main():
     print(f"{len(cmp)} unique companies present in the dataset")
     
     # make a shorter list of companies for testing
-    # cmp = cmp.head(20)
+    # cmp = cmp.head(2)
     
     # run the company ID search
     compURLs = company_URL_search(cmp)
@@ -180,11 +195,11 @@ def main():
     comb = benefitScrape.merge(compURLs, on='linkPart')
     
     # export to csv
-    comb.to_csv('checks/benes.csv', index_label="TblID")
+    comb.to_csv('checks/benes2.csv', index_label="TblID")
     
     #Add ratings to a new table in the database
     cnct = sqlite3.connect(db_loc)
-    comb.to_sql('ratings', cnct, if_exists='replace', index_label="TblID")
+    comb.to_sql('ratings', cnct, if_exists='append', index_label="TblID")
 
 if __name__ == "__main__":
     main()
