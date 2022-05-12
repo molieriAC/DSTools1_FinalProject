@@ -2,7 +2,7 @@
 
 ## Set up API call to glassdoor.com for the distinct companies in our dataset -- Anthony
 
-- [ ] build scraper pulling from jobs db
+- [x] build scraper pulling from jobs db
 
 ## Feature Engineering / Cleaning
 
@@ -10,9 +10,7 @@
 - [ ] Location (General Area)
 - [ ] Location (City)
 - [ ] Job Seniority
-- [ ] Company Size (glassdoor)
-- [ ] Company Industry (glassdoor)
-- [ ] Company HQ()
+- [ ] Calculate weighted Company Ratings by category 
 
 ## Visuals
 
