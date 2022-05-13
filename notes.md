@@ -10,7 +10,7 @@
 - [ ] Location (General Area)
 - [ ] Location (City)
 - [ ] Job Seniority
-- [ ] Calculate weighted Company Ratings by category 
+- [ ] Calculate weighted Company Ratings by category
 
 ## Visuals
 

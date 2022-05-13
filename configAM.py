@@ -1,1 +1,0 @@
-scraperAPIKey_AM = 'FDDucGNsNXvAE5PhHtb9QfqEPC0f8ENN'
