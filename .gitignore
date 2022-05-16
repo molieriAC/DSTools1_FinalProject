@@ -132,3 +132,6 @@ dmypy.json
 /checks
 .vscode
 config.py
+
+#test .csv extractions
+indeed.csv
