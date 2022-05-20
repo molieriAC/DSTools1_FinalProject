@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import plotly.graph_objs as go
 import plotly as plotly
 
-nlp = spacy.load('en')
+nlp = spacy.load('en_core_web_sm')
 
 
 def process_string(doc, entities=True, stoplist=None):
